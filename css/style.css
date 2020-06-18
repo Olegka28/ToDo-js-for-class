@@ -1,0 +1,39 @@
+
+* {
+    text-align: center;
+}
+
+p {
+    margin: 0;
+    padding: 0;
+}
+
+.todo_container {
+    padding-top: 20px;
+}
+
+.container_header {
+    display: flex;
+    justify-content: center;
+}
+
+.container_input {
+    margin-right: 30px;
+    width: 60%;
+    text-align: start;
+}
+
+.todo_container_items {
+    padding-top: 15px;
+    display: flex;
+    justify-content: space-around;
+}
+
+.button_remove_item{
+    max-height: 20px;
+    max-width: 25px;
+}
+
+.remove_item {
+    text-decoration: line-through;
+}
