@@ -1,4 +1,4 @@
-'use strict'
+'use strict';
 
 // Делаем список todo:
 
@@ -6,135 +6,239 @@
 // - рядом с каждой задачей есть чекбокс, если его нажать, то задача становится выполненной и текст должен быть зачеркнутым
 // - также рядом с каждой задачей есть крестик, при клике на который задача удаляется из списка
 
-class TodoController {
-    constructor() {
-        this.state = new TodoState();
-        this.view = new TodoView();
+class TodoControler {
+  constructor(model, view) {
+    this.model = model;
+    this.view = view;
 
-        this.view.buttonAddItem.addEventListener('click', this.addNewItem, this.state.addTodo);
-        document.addEventListener('click', this.deleteTodoById)
-    }
+    this.view.subscribe(({ name, type, id }) => {
+      if (type === 'add') {
+        // debugger
+        this.model.addTodo(new TodoItem(name));
+      }
 
-    addNewItem = (e) => {
-        if(this.view.input.value === '') {
-            alert("Поле не может быть пустым");
-            return
-        }
+      if (type === 'remove') {
+        // debugger
+        this.model.deleteTodoById(id);
+      }
 
-        this.view.input.value = '';
+      if (type === 'checked') {
+        this.model.toggleComplete(id);
+      }
 
-        this.buttonRemoveItem = document.createElement('button');
-        this.textContentInput = document.createElement('p');
-        this.containerTodoItems = document.createElement('div');
-        this.checked = document.createElement('input');
+      if (type === 'update') {
+        //  debugger
+        this.model.updateTodo(id, name);
+        //  this.model.addTodo(new TodoItem(name))
+        //  this.model.deleteTodoById(id);
+      }
 
-        this.containerTodoItems.className = 'todo_container_items';
-        this.containerTodoItems.setAttribute('data-id', Math.random() * 10);
-
-        this.checked.setAttribute('type', 'checkbox');
-        this.checked.className = 'input_checked';
-        this.buttonRemoveItem.innerHTML = '&times';
-        this.buttonRemoveItem.className = 'button_remove_item';
-        this.textContentInput.className = 'text_todo';
-
-
-        this.containerTodoItems.append(this.checked);
-        this.containerTodoItems.append(this.textContentInput);
-        this.containerTodoItems.append(this.buttonRemoveItem);
-
-        this.view.containerTodo.append(this.containerTodoItems);
-
-        this.state.items = {};
-        this.state.items.label = this.view.valueInput;
-        this.state.items.id = this.containerTodoItems.getAttribute('data-id');
-        this.state.items.checked = false;
-
-        this.textContentInput.textContent = this.view.valueInput;
-        this.view.input.value = '';
-
-        this.checked.addEventListener('click', this.toggleItem);
-        this.state.addTodo();
-        console.log(this.state.state)
-    }
-
-    toggleItem = (e) => {  
-        for(let i = 0; i < this.state.state.length; i++) {
-            if(e.path[1].getAttribute('data-id') === this.state.state[i].id) {
-                this.state.state[i].checked = e.target.checked;
-                document.querySelectorAll('.text_todo')[i].classList.toggle('remove_item');
-                // e.path[1].classList.toggle('remove_item');
-            }
-        }
-    }
-
-    deleteTodoById = (e) => {
-        if(e.target.closest('.button_remove_item')) {
-            for(let i = 0; i < this.state.state.length; i++) {
-                if(e.path[1].getAttribute('data-id') === this.state.state[i].id) {
-                    this.state.state[i].checked = e.target.checked;
-                    e.path[1].parentNode.removeChild(e.path[1]);
-                    this.state.removeToById(e.path[1].getAttribute('data-id'));
-                    console.log(this.state.state)
-                }
-            }
-        } 
-    }
+      this.view.render();
+    });
+    this.view.render();
+  }
 }
 
-class TodoState{
-    constructor() {
-        this.item = new TodoItem();
-        this.items = this.item.item;
-        this.state = [];
-    }
+class TodoModel {
+  constructor() {
+    this.state = [];
+    this.subcribers = [];
+  }
 
-    addTodo() {
-        this.state.push(this.items);
-    }
+  addTodo(item) {
+    this.state.push(item);
+  }
 
-    removeToById(id) {
-        this.state.forEach((el, index) => {
-            if(el.id === id) {
-                this.state.splice(index, 1);
-            }
-        })
+  deleteTodoById(id) {
+    this.state = this.state.filter((item) => item.id !== id);
+  }
+
+  updateTodo(id, name) {
+    const todo = this.state.find((item) => item.id === id);
+
+    if (todo) {
+      todo.name = name;
     }
+  }
+
+  toggleComplete(id) {
+    const todo = this.state.find((item) => item.id === id);
+
+    if (todo) {
+      todo.toggle();
+    }
+  }
+
+  getState() {
+    return this.state;
+  }
 }
 
 class TodoItem {
-    constructor() {
-        this.item;     
-    }
+  constructor(name, complete = false) {
+    this.name = name;
+    this.complete = complete;
+    this.id = Math.random();
+  }
+
+  toggle() {
+    this.complete = !this.complete;
+  }
 }
 
 class TodoView {
-    constructor(){
-        this.containerTodo = document.querySelector('.todo_container');
-        this.input = document.createElement('input');
-        this.buttonAddItem = document.createElement('button');
-        this.containerTodoHeader = document.createElement('div');
+  constructor(model, container) {
+    this.model = model;
+    this.container = container;
+    this.subcribers = [];
 
-        this.valueInput;
+    this.initialRender();
+    // this.input.addEventListener('input', )
+  }
 
-        this.input.setAttribute('placeholder', 'What need to be done?');
-        this.input.className = 'container_input';
-        this.buttonAddItem.textContent = "Add Item";
-        this.buttonAddItem.className = "conteiner_button_add";
-        this.containerTodoHeader.className = 'container_header';
+  subscribe(subscriber) {
+    this.subcribers.push(subscriber);
+  }
 
-        this.containerTodoHeader.append(this.input);
-        this.containerTodoHeader.append(this.buttonAddItem);
-        this.containerTodo.append(this.containerTodoHeader);
+  notify(data) {
+    this.subcribers.forEach((cb) => cb(data));
+  }
 
-        this.input.addEventListener('input', this.listeInput);
+  handleTodoAdd = () => {
+    if (this.input.value === '') return;
+    this.notify({
+      name: this.input.value,
+      type: 'add',
+    });
+    this.todoList.append(this.li);
+    this.input.value = '';
+  };
+
+  handleTodoRemove = (e) => {
+    const removeBtn = e.target.closest('.button_remove_item');
+    if (removeBtn) {
+      this.notify({
+        id: Number(removeBtn.closest('.todo_container_items').dataset.id),
+        type: 'remove',
+      });
+      removeBtn
+        .closest('.todo_container_items')
+        .parentElement.removeChild(removeBtn.closest('.todo_container_items'));
     }
+  };
 
-    listeInput = (e) => {
-        this.valueInput = e.target.value;
+  handleTodoChecked = (e) => {
+    const checked = e.target.closest('.input_checked');
+
+    if (checked) {
+      this.notify({
+        id: Number(checked.closest('.todo_container_items').dataset.id),
+        type: 'checked',
+      });
+
+      checked.parentElement.classList.toggle('remove_item');
     }
+  };
 
+  handleTodoUpdateName = (e) => {
+    const text = e.target.closest('.text_todo');
+    this.updateInput = document.createElement('input');
+    this.updateBtn = document.createElement('button');
+    this.updateState = this.updateState.bind(this);
+    if (text) {
+      this.updateInput.className = 'update_input';
+      this.updateInput.setAttribute('type', 'text');
+      this.updateInput.setAttribute('value', text.textContent);
+      this.updateBtn.textContent = 'Update';
+      this.updateBtn.className = 'update_btn';
+      text.after(this.updateBtn);
+      text.after(this.updateInput);
+
+      this.updateBtn.addEventListener('click', this.updateState);
+    }
+  };
+
+  updateState = (e) => {
+    const updateBtn = e.target.closest('.update_btn');
+    if (updateBtn) {
+      const inputUpdateOnTodoList = document.querySelector('.update_input');
+      const updateBtnOnTodoList = document.querySelector('.update_btn');
+      const todoLists = document.querySelectorAll('.todo_container_items');
+
+      todoLists.forEach((todo) => {
+        if (
+          Number(todo.dataset.id) === Number(updateBtn.closest('.todo_container_items').dataset.id)
+        ) {
+          todo.children[1].textContent = inputUpdateOnTodoList.value;
+          inputUpdateOnTodoList.value = '';
+        }
+      });
+
+      this.notify({
+        id: Number(updateBtn.closest('.todo_container_items').dataset.id),
+        name: inputUpdateOnTodoList.value,
+        type: 'update',
+      });
+      inputUpdateOnTodoList.remove();
+      updateBtnOnTodoList.remove();
+    }
+  };
+
+  initialRender() {
+    this.input = document.createElement('input');
+    this.buttonAddItem = document.createElement('button');
+
+    const containerTodoHeader = document.createElement('div');
+    const listItem = document.createElement('ul');
+    // add atribute and class
+
+    this.input.setAttribute('placeholder', 'What need to be done?');
+    this.input.className = 'container_input';
+    this.buttonAddItem.textContent = 'Add Item';
+    this.buttonAddItem.className = 'conteiner_button_add';
+    containerTodoHeader.className = 'container_header';
+    listItem.className = 'todo-list';
+
+    // add in divHeader
+    containerTodoHeader.append(this.input);
+    containerTodoHeader.append(this.buttonAddItem);
+
+    // add in document
+    this.container.append(containerTodoHeader);
+    this.container.append(listItem);
+
+    this.buttonAddItem.addEventListener('click', this.handleTodoAdd);
+    listItem.addEventListener('click', this.handleTodoRemove);
+    listItem.addEventListener('click', this.handleTodoChecked);
+    listItem.addEventListener('click', this.handleTodoUpdateName);
+  }
+
+  render() {
+    this.model.getState().forEach((todo) => {
+      this.todoList = this.container.querySelector('.todo-list');
+      this.li = document.createElement('li');
+      this.buttonRemoveItem = document.createElement('button');
+      this.textContentInput = document.createElement('p');
+      this.checked = document.createElement('input');
+
+      this.li.className = 'todo_container_items';
+      this.li.setAttribute('data-id', todo.id);
+
+      this.checked.setAttribute('type', 'checkbox');
+      this.checked.className = 'input_checked';
+      this.buttonRemoveItem.innerHTML = '&times';
+      this.buttonRemoveItem.className = 'button_remove_item';
+      this.textContentInput.className = 'text_todo';
+      this.textContentInput.textContent = todo.name;
+
+      this.li.append(this.checked);
+      this.li.append(this.textContentInput);
+      this.li.append(this.buttonRemoveItem);
+      // this.todoList.append(this.li);
+    });
+  }
 }
 
-const todo = new TodoController();
-
-document.addEventListener('onload', todo);
+const model = new TodoModel();
+const view = new TodoView(model, document.querySelector('.app-todo'));
+const controler = new TodoControler(model, view);
